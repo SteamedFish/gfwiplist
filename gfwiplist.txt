@@ -43,6 +43,8 @@
 54.240.128.0/18
 # AMAZON-2Z
 54.240.192.0/18
+# AMAZO-ZL4 (NET-54-230-0-0-1) 54.230.0.0 - 54.231.255.255
+54.230.0.0/15
 # Amazon EC2 https://forums.aws.amazon.com/ann.jspa?annID=1528
 # Amazon EC2 https://forums.aws.amazon.com/ann.jspa?annID=1701
 72.44.32.0/19
