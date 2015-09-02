@@ -8,7 +8,7 @@ GFW 境外列表（部分），可用于设置路由表走 VPN
 
 ## License
 
-WTFPL V2:
+[WTFPL V2](http://www.wtfpl.net/txt/copying/)
 
 <a href="http://www.wtfpl.net/"><img
        src="http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-4.png"
