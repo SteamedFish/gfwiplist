@@ -107,7 +107,7 @@
 54.240.192.0/18
 # AMAZO-ZL4 (NET-54-230-0-0-1) 54.230.0.0 - 54.231.255.255
 54.230.0.0/15
-# Amazon EC2 https://forums.aws.amazon.com/ann.jspa?annID=1701
+# Amazon EC2 http://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
 # US East (Northern Virginia):
 72.44.32.0/19
 67.202.0.0/18
