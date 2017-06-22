@@ -12,3 +12,4 @@ cdn.sstatic.net
 cloudflare.net
 gstatic.com
 cdninstagram.com
+yahoodns.net
