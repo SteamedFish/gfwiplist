@@ -16,6 +16,7 @@ A: 你可以在 [这里](https://github.com/gfwlist/gfwlist) 查到被墙 URL �
    但是这个列表并没有区分是 IP 被封锁还是域名被污染。
    如果你偷懒，可以把这个列表涉及到的所有域名都加入到防污染中，不管原因。
    如果你勤快，可以写个脚本过滤出来其中真正的污染的域名列表。
+   [这里](https://github.com/wongsyrone/domain-block-list) 有一个现成的偷懒列表
 
 Q: 上面问题中涉及到的列表，不包含 css/js/图片 等资源文件被污染的情况
 
