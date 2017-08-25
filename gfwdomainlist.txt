@@ -13,3 +13,4 @@ cloudflare.net
 gstatic.com
 cdninstagram.com
 yahoodns.net
+line.me.akadns.net
