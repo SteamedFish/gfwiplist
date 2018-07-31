@@ -2,3 +2,4 @@ python-whois
 future
 netaddr
 simplejson
+jinja2
