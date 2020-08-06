@@ -13,9 +13,10 @@ import netaddr
 import whois
 
 
-def aws2cidr(split: bool = True) -> str:
+def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
     """read aws cidrs.
     split: amazon put cidrs in different services. Don't merge those services
+    ipv6: enable ipv6
     """
 
     content = urlopen(
@@ -30,9 +31,10 @@ def aws2cidr(split: bool = True) -> str:
     for key in ipv4data:
         if not key["region"].startswith("cn-"):
             resultdict[key["service"]].append(netaddr.IPNetwork(key["ip_prefix"]))
-    for key in ipv6data:
-        if not key["region"].startswith("cn-"):
-            resultdict[key["service"]].append(netaddr.IPNetwork(key["ipv6_prefix"]))
+    if ipv6:
+        for key in ipv6data:
+            if not key["region"].startswith("cn-"):
+                resultdict[key["service"]].append(netaddr.IPNetwork(key["ipv6_prefix"]))
 
     if not split:
         # merge all cidr blocks
@@ -64,7 +66,7 @@ def aws2cidr(split: bool = True) -> str:
     return result
 
 
-def as2cidr(asnumber: int) -> str:
+def as2cidr(asnumber: int, ipv6: bool = True) -> str:
     """Return networks from a asn."""
 
     nic_client = whois.NICClient()
@@ -76,10 +78,37 @@ def as2cidr(asnumber: int) -> str:
 
     cidr_regex = re.compile(
         (
-            r"\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+            r"\b"
             r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
             r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
-            r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/(3[0-2]|[1-2]?[0-9])\b"
+            r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+            r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+            r"/(3[0-2]|[1-2]?[0-9])"
+            r"\b"
+        )
+    )
+
+    cidr6_regex = re.compile(
+        (
+            r"\b"
+            r"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|"
+            r"([0-9a-fA-F]{1,4}:){1,7}:|"
+            r"([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|"
+            r"([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|"
+            r"([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|"
+            r"([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|"
+            r"([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|"
+            r"[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|"
+            r":((:[0-9a-fA-F]{1,4}){1,7}|:)|"
+            r"fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|"
+            r"::(ffff(:0{1,4}){0,1}:){0,1}"
+            r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}"
+            r"(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|"
+            r"([0-9a-fA-F]{1,4}:){1,4}:"
+            r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}"
+            r"(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+            r"\/(1[01][0-9]|12[0-8]|[0-9]{1,2})"
+            r"\b"
         )
     )
 
@@ -88,6 +117,10 @@ def as2cidr(asnumber: int) -> str:
         match = cidr_regex.search(line)
         if match:
             total.append(netaddr.IPNetwork(match.group(0)))
+        if ipv6:
+            match = cidr6_regex.search(line)
+            if match:
+                total.append(netaddr.IPNetwork(match.group(0)))
 
     total = netaddr.cidr_merge(total)
     return "\n".join([str(network).strip() for network in total])
