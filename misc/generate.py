@@ -11,6 +11,7 @@ from urllib.request import urlopen
 import jinja2
 import netaddr
 import whois
+import requests
 
 
 def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
@@ -65,6 +66,26 @@ def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
 
     return result
 
+def gh2cidr(ipv6: bool = True ) -> str:
+    result = ""
+    result += requests.get("https://www.cloudflare.com/ips-v4").text
+    if ipv6:
+        result += requests.get("https://www.cloudflare.com/ips-v6").text
+    return result
+
+def cf2cidr(ipv6: bool = True ) -> str:
+    # GitHub is currently using a lot of Microsoft's IP
+    # Cannot determine by AS number
+    ghmeta = requests.get("https://api.github.com/meta").json()
+    github: List[netaddr.IPNetwork] = []
+    for block in ("hooks", "web", "api", "git", "packages", "pages"):
+        ipranges = ghmeta[block]
+        for ip in ipranges:
+            if not ipv6:
+                if ":" in ip:
+                    continue
+            github.append(ip)
+    return "\n".join([str(network).strip() for network in netaddr.cidr_merge(github)])
 
 def as2cidr(asnumber: int, ipv6: bool = True) -> str:
     """Return networks from a asn."""
@@ -132,5 +153,7 @@ if __name__ == "__main__":
     ).get_template("gfwiplist.j2")
     template.globals["as2cidr"] = as2cidr
     template.globals["aws2cidr"] = aws2cidr
+    template.globals["cf2cidr"] = cf2cidr
+    template.globals["gh2cidr"] = gh2cidr
     output = template.render()
     print(output)
