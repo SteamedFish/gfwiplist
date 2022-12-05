@@ -66,14 +66,14 @@ def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
 
     return result
 
-def gh2cidr(ipv6: bool = True ) -> str:
+def cf2cidr(ipv6: bool = True ) -> str:
     result = ""
     result += requests.get("https://www.cloudflare.com/ips-v4").text
     if ipv6:
         result += requests.get("https://www.cloudflare.com/ips-v6").text
     return result
 
-def cf2cidr(ipv6: bool = True ) -> str:
+def gh2cidr(ipv6: bool = True ) -> str:
     # GitHub is currently using a lot of Microsoft's IP
     # Cannot determine by AS number
     ghmeta = requests.get("https://api.github.com/meta").json()
