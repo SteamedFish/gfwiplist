@@ -78,7 +78,19 @@ def gh2cidr(ipv6: bool = True ) -> str:
     # Cannot determine by AS number
     ghmeta = requests.get("https://api.github.com/meta").json()
     github: List[netaddr.IPNetwork] = []
-    for block in ("hooks", "web", "api", "git", "packages", "pages"):
+    for block in ("hooks",
+                  "web",
+                  "api",
+                  "git",
+                  "github_enterprise_importer",
+                  "packages",
+                  "pages",
+                  "importer",
+                  #"actions",
+                  #"actions_macos",
+                  "codespaces",
+                  "copilot",
+                  ):
         ipranges = ghmeta[block]
         for ip in ipranges:
             if not ipv6:
