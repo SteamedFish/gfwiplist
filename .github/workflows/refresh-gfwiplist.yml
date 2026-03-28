@@ -49,24 +49,7 @@ jobs:
       - name: Generate IP list
         working-directory: ./misc
         run: |
-          set -e  # Exit on error
-          echo "Starting IP list generation..."
-          
-          # Run Python and capture both stdout and stderr
-          if ! python generate.py > ../gfwiplist.txt.new 2>../generate_error.log; then
-            echo "Error: Python script failed"
-            echo "--- Python stderr output ---"
-            cat ../generate_error.log
-            exit 1
-          fi
-          
-          echo "Generated new IP list"
-          
-          # Show stderr output if any (filtering info messages)
-          if [ -s ../generate_error.log ]; then
-            echo "--- Python stderr output ---"
-            cat ../generate_error.log
-          fi
+          python generate.py > ../gfwiplist.txt.new
           
           # Validate output is not empty
           if [ ! -s ../gfwiplist.txt.new ]; then
@@ -76,41 +59,29 @@ jobs:
           
           # Validate file has reasonable line count (at least 100 lines)
           line_count=$(wc -l < ../gfwiplist.txt.new)
-          echo "Generated $line_count lines"
           if [ "$line_count" -lt 100 ]; then
-            echo "Error: Generated file has too few lines ($line_count), possible generation failure"
-            echo "--- First 50 lines of output ---"
-            head -50 ../gfwiplist.txt.new
+            echo "Error: Generated file has too few lines ($line_count)"
             exit 1
           fi
           
           # Validate file contains IP addresses (basic check)
           if ! grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' ../gfwiplist.txt.new; then
             echo "Error: Generated file does not contain valid IPv4 CIDR ranges"
-            echo "--- First 50 lines of output ---"
-            head -50 ../gfwiplist.txt.new
             exit 1
           fi
       
       - name: Check for changes
         id: check_changes
         run: |
-          echo "Checking for changes..."
-          ls -la gfwiplist.txt* 2>/dev/null || echo "Files in current directory:"
-          pwd
-          ls -la
           if [ -f gfwiplist.txt ]; then
             if diff -q gfwiplist.txt gfwiplist.txt.new > /dev/null 2>&1; then
-              echo "No changes detected"
               echo "changed=false" >> $GITHUB_OUTPUT
               rm gfwiplist.txt.new
             else
-              echo "Changes detected"
               echo "changed=true" >> $GITHUB_OUTPUT
               mv gfwiplist.txt.new gfwiplist.txt
             fi
           else
-            echo "gfwiplist.txt does not exist, creating new file"
             echo "changed=true" >> $GITHUB_OUTPUT
             mv gfwiplist.txt.new gfwiplist.txt
           fi
