@@ -6,7 +6,7 @@ import json
 import re
 import sys
 from collections import defaultdict
-from typing import List
+from typing import List, Optional
 from urllib.request import urlopen
 
 import jinja2
@@ -229,6 +229,152 @@ def gh2cidr(ipv6: bool = True) -> str:
     return "\n".join([str(network).strip() for network in netaddr.cidr_merge(github)])
 
 
+def fetch_china_ip_list(ipv6: bool = True) -> netaddr.IPSet:
+    """Fetch China IP ranges from mayaxcn/china-ip-list.
+
+    Args:
+        ipv6: Whether to include IPv6 ranges. Defaults to True.
+
+    Returns:
+        IPSet containing all China IP ranges for efficient lookup.
+    """
+    urls = [
+        "https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt"
+    ]
+    if ipv6:
+        urls.append(
+            "https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute_v6.txt"
+        )
+
+    china_ips: List[netaddr.IPNetwork] = []
+    invalid_count = 0
+
+    for url in urls:
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(
+                f"Warning: Failed to fetch China IP list from {url}: {e}",
+                file=sys.stderr,
+            )
+            continue
+
+        for line in response.text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                network = netaddr.IPNetwork(line)
+                china_ips.append(network)
+            except netaddr.AddrFormatError:
+                invalid_count += 1
+                continue
+
+    if invalid_count > 0:
+        print(
+            f"Warning: Skipped {invalid_count} invalid lines from China IP list",
+            file=sys.stderr,
+        )
+
+    return netaddr.IPSet(china_ips)
+
+
+def parse_and_filter_blocks(text: str, china_set: netaddr.IPSet) -> List[str]:
+    """Parse output and filter China IPs at sub-block level.
+
+    Structure:
+    - Major sections are separated by lines of "###...###"
+    - Within sections, sub-blocks start with "### SERVICE ###"
+    - Comments start with "#"
+    - Each sub-block is filtered and merged independently
+
+    Returns list of output lines preserving structure.
+    """
+    result = []
+    current_section_header = ""
+    current_subblock_header = ""
+    current_content = []
+
+    def flush_subblock():
+        nonlocal current_subblock_header, current_content
+        if current_content or current_subblock_header:
+            # Output sub-block header if exists
+            if current_subblock_header:
+                result.append(current_subblock_header)
+            # Filter and merge content
+            if current_content:
+                filtered = filter_and_merge_content(current_content, china_set)
+                result.extend(filtered)
+            current_subblock_header = ""
+            current_content = []
+
+    def flush_section_header():
+        nonlocal current_section_header
+        if current_section_header:
+            result.append(current_section_header)
+            current_section_header = ""
+
+    for line in text.splitlines():
+        stripped = line.strip()
+
+        if not stripped:
+            continue
+
+        # Major section separator (all #, no other content)
+        if all(c == "#" for c in stripped):
+            flush_subblock()
+            flush_section_header()
+            result.append(line)
+        # Sub-block header like "### AMAZON ###"
+        elif stripped.startswith("###") and stripped.endswith("###"):
+            flush_subblock()
+            current_subblock_header = line
+        # Comment lines
+        elif stripped.startswith("#"):
+            flush_subblock()
+            flush_section_header()
+            result.append(line)
+        else:
+            current_content.append(line)
+
+    # Flush final subblock
+    flush_subblock()
+
+    return result
+
+
+def filter_and_merge_content(
+    content_lines: List[str], china_set: netaddr.IPSet
+) -> List[str]:
+    """Filter China IPs from content lines and merge remaining CIDRs."""
+    networks: List[netaddr.IPNetwork] = []
+
+    for line in content_lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            network = netaddr.IPNetwork(stripped)
+            networks.append(network)
+        except (netaddr.AddrFormatError, ValueError):
+            continue
+
+    if not networks:
+        return content_lines
+
+    # Create IPSet from networks and subtract China IPs
+    block_set = netaddr.IPSet(networks)
+    result_set = block_set - china_set
+
+    if not result_set:
+        return []
+
+    # Convert back to CIDRs and return as strings
+    merged = netaddr.cidr_merge(list(result_set.iter_cidrs()))
+    return [str(network) for network in merged]
+
+
 def as2cidr(asnumber: int, ipv6: bool = True) -> str:
     """Return networks from a asn."""
 
@@ -319,8 +465,22 @@ if __name__ == "__main__":
         template.globals["aws2cidr"] = aws2cidr
         template.globals["cf2cidr"] = cf2cidr
         template.globals["gh2cidr"] = gh2cidr
+
+        print("Fetching China IP list...", file=sys.stderr)
+        china_set = fetch_china_ip_list()
+        print(f"Loaded China IP ranges (IPSet size: {china_set.size})", file=sys.stderr)
+
+        print("Rendering template...", file=sys.stderr)
         output = template.render()
-        print(output)
+
+        print("Processing blocks...", file=sys.stderr)
+        result_lines = parse_and_filter_blocks(output, china_set)
+
+        print("\n".join(result_lines))
+
     except Exception as e:
+        import traceback
+
         print(f"Error generating IP list: {e}", file=sys.stderr)
+        traceback.print_exc()
         sys.exit(1)
