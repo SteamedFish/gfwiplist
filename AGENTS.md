@@ -77,6 +77,16 @@ No active tasks.
 
 ## CHANGELOG
 
+### 2025-03-29
+
+- Added feature to fetch China IP list from mayaxcn/china-ip-list repository
+- Implemented automatic filtering of China domestic IP ranges from GFW list
+- Added block-based processing to preserve output structure (headers, comments)
+- Implemented CIDR merging within blocks while keeping blocks separate
+- Added sub-block processing: each service section (like "### AMAZON ###", "### EC2 ###") is filtered and merged independently
+- Added IPv6 support for China IP filtering
+- Updated generate.py with `fetch_china_ip_list()`, `parse_and_filter_blocks()`, and `filter_and_merge_content()` functions
+
 ### 2025-03-28
 
 - Fixed Python type hint syntax errors (List[] brackets)
