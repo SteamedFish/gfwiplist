@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - master
+      - del
     paths:
       - 'misc/generate.py'
       - 'misc/requirements.txt'
