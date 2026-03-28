@@ -39,7 +39,7 @@ def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
 
     if not split:
         # merge all cidr blocks
-        total: List(netaddr.IPNetwork) = []
+        total: List[netaddr.IPNetwork] = []
         for key in resultdict:
             total += resultdict[key]
         total = netaddr.cidr_merge(total)
@@ -66,31 +66,52 @@ def aws2cidr(split: bool = True, ipv6: bool = True) -> str:
 
     return result
 
-def cf2cidr(ipv6: bool = True ) -> str:
+
+def cf2cidr(ipv6: bool = True) -> str:
+    """Fetch Cloudflare IP ranges.
+
+    Args:
+        ipv6: Whether to include IPv6 ranges. Defaults to True.
+
+    Returns:
+        String containing Cloudflare CIDR blocks, one per line.
+    """
     result = ""
     result += requests.get("https://www.cloudflare.com/ips-v4").text
     if ipv6:
         result += requests.get("https://www.cloudflare.com/ips-v6").text
     return result
 
-def gh2cidr(ipv6: bool = True ) -> str:
-    # GitHub is currently using a lot of Microsoft's IP
-    # Cannot determine by AS number
+
+def gh2cidr(ipv6: bool = True) -> str:
+    """Fetch GitHub IP ranges from GitHub API.
+
+    Args:
+        ipv6: Whether to include IPv6 ranges. Defaults to True.
+
+    Returns:
+        String containing GitHub CIDR blocks, one per line.
+
+    Note:
+        GitHub is currently using a lot of Microsoft's IP.
+        Cannot determine by AS number.
+    """
     ghmeta = requests.get("https://api.github.com/meta").json()
     github: List[netaddr.IPNetwork] = []
-    for block in ("hooks",
-                  "web",
-                  "api",
-                  "git",
-                  "github_enterprise_importer",
-                  "packages",
-                  "pages",
-                  "importer",
-                  #"actions",
-                  #"actions_macos",
-                  "codespaces",
-                  "copilot",
-                  ):
+    for block in (
+        "hooks",
+        "web",
+        "api",
+        "git",
+        "github_enterprise_importer",
+        "packages",
+        "pages",
+        "importer",
+        # "actions",
+        # "actions_macos",
+        "codespaces",
+        "copilot",
+    ):
         ipranges = ghmeta[block]
         for ip in ipranges:
             if not ipv6:
@@ -98,6 +119,7 @@ def gh2cidr(ipv6: bool = True ) -> str:
                     continue
             github.append(ip)
     return "\n".join([str(network).strip() for network in netaddr.cidr_merge(github)])
+
 
 def as2cidr(asnumber: int, ipv6: bool = True) -> str:
     """Return networks from a asn."""
@@ -145,7 +167,7 @@ def as2cidr(asnumber: int, ipv6: bool = True) -> str:
         )
     )
 
-    total: List(netaddr.IPNetwork) = []
+    total: List[netaddr.IPNetwork] = []
     for line in whois_result.splitlines():
         match = cidr_regex.search(line)
         if match:
