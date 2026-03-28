@@ -1,3 +1,4 @@
 python-whois
 netaddr
 jinja2
+requests
