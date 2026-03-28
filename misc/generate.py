@@ -130,26 +130,6 @@ def is_valid_public_ip(network: netaddr.IPNetwork) -> bool:
         if not isinstance(network, netaddr.IPNetwork):
             network = netaddr.IPNetwork(str(network))
 
-        # Skip if private
-        if network.is_private():
-            return False
-
-        # Skip if reserved
-        if network.is_reserved():
-            return False
-
-        # Skip if multicast
-        if network.is_multicast():
-            return False
-
-        # Skip if loopback
-        if network.is_loopback():
-            return False
-
-        # Skip if link-local
-        if network.is_link_local():
-            return False
-
         # Check against bogon lists
         if network.version == 4:
             for bogon in bogon_ranges_v4:
