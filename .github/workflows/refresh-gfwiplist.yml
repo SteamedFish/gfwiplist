@@ -51,7 +51,26 @@ jobs:
         run: |
           python generate.py > ../gfwiplist.txt.new
           echo "Generated new IP list"
-          wc -l ../gfwiplist.txt.new
+          
+          # Validate output is not empty
+          if [ ! -s ../gfwiplist.txt.new ]; then
+            echo "Error: Generated file is empty"
+            exit 1
+          fi
+          
+          # Validate file has reasonable line count (at least 100 lines)
+          line_count=$(wc -l < ../gfwiplist.txt.new)
+          echo "Generated $line_count lines"
+          if [ "$line_count" -lt 100 ]; then
+            echo "Error: Generated file has too few lines ($line_count), possible generation failure"
+            exit 1
+          fi
+          
+          # Validate file contains IP addresses (basic check)
+          if ! grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' ../gfwiplist.txt.new; then
+            echo "Error: Generated file does not contain valid IPv4 CIDR ranges"
+            exit 1
+          fi
       
       - name: Check for changes
         id: check_changes
