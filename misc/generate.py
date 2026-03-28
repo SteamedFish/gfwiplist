@@ -182,12 +182,18 @@ def as2cidr(asnumber: int, ipv6: bool = True) -> str:
 
 
 if __name__ == "__main__":
-    template = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(searchpath="./")
-    ).get_template("gfwiplist.j2")
-    template.globals["as2cidr"] = as2cidr
-    template.globals["aws2cidr"] = aws2cidr
-    template.globals["cf2cidr"] = cf2cidr
-    template.globals["gh2cidr"] = gh2cidr
-    output = template.render()
-    print(output)
+    import sys
+
+    try:
+        template = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(searchpath="./")
+        ).get_template("gfwiplist.j2")
+        template.globals["as2cidr"] = as2cidr
+        template.globals["aws2cidr"] = aws2cidr
+        template.globals["cf2cidr"] = cf2cidr
+        template.globals["gh2cidr"] = gh2cidr
+        output = template.render()
+        print(output)
+    except Exception as e:
+        print(f"Error generating IP list: {e}", file=sys.stderr)
+        sys.exit(1)

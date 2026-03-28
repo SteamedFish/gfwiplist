@@ -50,10 +50,16 @@ jobs:
         working-directory: ./misc
         run: |
           python generate.py > ../gfwiplist.txt.new
+          echo "Generated new IP list"
+          wc -l ../gfwiplist.txt.new
       
       - name: Check for changes
         id: check_changes
         run: |
+          echo "Checking for changes..."
+          ls -la gfwiplist.txt* 2>/dev/null || echo "Files in current directory:"
+          pwd
+          ls -la
           if [ -f gfwiplist.txt ]; then
             if diff -q gfwiplist.txt gfwiplist.txt.new > /dev/null 2>&1; then
               echo "No changes detected"
