@@ -83,60 +83,6 @@ def cf2cidr(ipv6: bool = True) -> str:
     return result
 
 
-def gh2cidr(ipv6: bool = True) -> str:
-    """Fetch GitHub IP ranges from GitHub API.
-
-    Args:
-        ipv6: Whether to include IPv6 ranges. Defaults to True.
-
-    Returns:
-        String containing GitHub CIDR blocks, one per line.
-
-    Note:
-        GitHub is currently using a lot of Microsoft's IP.
-        Cannot determine by AS number.
-    """
-    ghmeta = requests.get("https://api.github.com/meta").json()
-    github: List[netaddr.IPNetwork] = []
-    invalid_count = 0
-    for block in (
-        "hooks",
-        "web",
-        "api",
-        "git",
-        "github_enterprise_importer",
-        "packages",
-        "pages",
-        "importer",
-        # "actions",
-        # "actions_macos",
-        "codespaces",
-        "copilot",
-    ):
-        ipranges = ghmeta[block]
-        for ip in ipranges:
-            if not ipv6:
-                if ":" in ip:
-                    continue
-            try:
-                network = netaddr.IPNetwork(ip)
-                if is_valid_public_ip(network):
-                    github.append(network)
-                else:
-                    invalid_count += 1
-            except netaddr.AddrFormatError:
-                invalid_count += 1
-                continue
-
-    if invalid_count > 0:
-        print(
-            f"Filtered {invalid_count} invalid/bogon IP ranges from GitHub",
-            file=sys.stderr,
-        )
-
-    return "\n".join([str(network).strip() for network in netaddr.cidr_merge(github)])
-
-
 def is_valid_public_ip(network: netaddr.IPNetwork) -> bool:
     """Check if IP network is valid and publicly routable.
 
@@ -216,6 +162,60 @@ def is_valid_public_ip(network: netaddr.IPNetwork) -> bool:
         return True
     except (netaddr.AddrFormatError, ValueError):
         return False
+
+
+def gh2cidr(ipv6: bool = True) -> str:
+    """Fetch GitHub IP ranges from GitHub API.
+
+    Args:
+        ipv6: Whether to include IPv6 ranges. Defaults to True.
+
+    Returns:
+        String containing GitHub CIDR blocks, one per line.
+
+    Note:
+        GitHub is currently using a lot of Microsoft's IP.
+        Cannot determine by AS number.
+    """
+    ghmeta = requests.get("https://api.github.com/meta").json()
+    github: List[netaddr.IPNetwork] = []
+    invalid_count = 0
+    for block in (
+        "hooks",
+        "web",
+        "api",
+        "git",
+        "github_enterprise_importer",
+        "packages",
+        "pages",
+        "importer",
+        # "actions",
+        # "actions_macos",
+        "codespaces",
+        "copilot",
+    ):
+        ipranges = ghmeta[block]
+        for ip in ipranges:
+            if not ipv6:
+                if ":" in ip:
+                    continue
+            try:
+                network = netaddr.IPNetwork(ip)
+                if is_valid_public_ip(network):
+                    github.append(network)
+                else:
+                    invalid_count += 1
+            except netaddr.AddrFormatError:
+                invalid_count += 1
+                continue
+
+    if invalid_count > 0:
+        print(
+            f"Filtered {invalid_count} invalid/bogon IP ranges from GitHub",
+            file=sys.stderr,
+        )
+
+    return "\n".join([str(network).strip() for network in netaddr.cidr_merge(github)])
 
 
 def as2cidr(asnumber: int, ipv6: bool = True) -> str:
