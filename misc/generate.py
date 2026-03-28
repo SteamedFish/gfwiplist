@@ -4,6 +4,7 @@
 
 import json
 import re
+import sys
 from collections import defaultdict
 from typing import List
 from urllib.request import urlopen
@@ -294,8 +295,6 @@ def as2cidr(asnumber: int, ipv6: bool = True) -> str:
 
 
 if __name__ == "__main__":
-    import sys
-
     try:
         template = jinja2.Environment(
             loader=jinja2.FileSystemLoader(searchpath="./")
