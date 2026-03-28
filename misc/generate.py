@@ -84,6 +84,36 @@ def cf2cidr(ipv6: bool = True) -> str:
     return result
 
 
+def normalize_ip(ip_str: str) -> str:
+    """Normalize IP address by removing leading zeros from octets.
+
+    netaddr rejects IPs like '192.168.001.001' but accepts '192.168.1.1'.
+    This function normalizes such IPs before creating IPNetwork objects.
+
+    Args:
+        ip_str: IP address string (e.g., '204.154.094.000/23')
+
+    Returns:
+        Normalized IP string (e.g., '204.154.94.0/23')
+    """
+    # Handle CIDR notation
+    if "/" in ip_str:
+        ip_part, prefix = ip_str.rsplit("/", 1)
+    else:
+        ip_part = ip_str
+        prefix = None
+
+    # For IPv4, remove leading zeros from each octet
+    if "." in ip_part and ":" not in ip_part:
+        octets = ip_part.split(".")
+        normalized_octets = [str(int(octet)) for octet in octets]
+        ip_part = ".".join(normalized_octets)
+
+    if prefix:
+        return f"{ip_part}/{prefix}"
+    return ip_part
+
+
 def is_valid_public_ip(network: netaddr.IPNetwork) -> bool:
     """Check if IP network is valid and publicly routable.
 
@@ -128,7 +158,7 @@ def is_valid_public_ip(network: netaddr.IPNetwork) -> bool:
     try:
         # Check if it's a valid IP network
         if not isinstance(network, netaddr.IPNetwork):
-            network = netaddr.IPNetwork(str(network))
+            network = netaddr.IPNetwork(normalize_ip(str(network)))
 
         # Check against bogon lists
         if network.version == 4:
@@ -250,18 +280,24 @@ def as2cidr(asnumber: int, ipv6: bool = True) -> str:
     for line in whois_result.splitlines():
         match = cidr_regex.search(line)
         if match:
-            network = netaddr.IPNetwork(match.group(0))
-            if is_valid_public_ip(network):
-                total.append(network)
-            else:
+            try:
+                network = netaddr.IPNetwork(normalize_ip(match.group(0)))
+                if is_valid_public_ip(network):
+                    total.append(network)
+                else:
+                    invalid_count += 1
+            except netaddr.AddrFormatError:
                 invalid_count += 1
         if ipv6:
             match = cidr6_regex.search(line)
             if match:
-                network = netaddr.IPNetwork(match.group(0))
-                if is_valid_public_ip(network):
-                    total.append(network)
-                else:
+                try:
+                    network = netaddr.IPNetwork(normalize_ip(match.group(0)))
+                    if is_valid_public_ip(network):
+                        total.append(network)
+                    else:
+                        invalid_count += 1
+                except netaddr.AddrFormatError:
                     invalid_count += 1
 
     if invalid_count > 0:
